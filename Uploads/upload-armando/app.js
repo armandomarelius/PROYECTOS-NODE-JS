@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 // Ruta de la carpeta "uploads"
 const uploadsDir = path.join(__dirname, "uploads");
 
-// Verificar si la carpeta "uploads"exise y sino la crea 
+
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
   console.log(`Carpeta "${uploadsDir}" creada exitosamente.`);

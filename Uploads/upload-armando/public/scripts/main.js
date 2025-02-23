@@ -1,25 +1,42 @@
-
 document.addEventListener("DOMContentLoaded", () => {
   const uploadForm = document.getElementById("uploadForm");
   const fileList = document.getElementById("fileList");
   const clearRecycleButton = document.getElementById("clearRecycle");
-  const ctx = document.getElementById("sizeChart"); // Elemento canvas del gráfico
+  const ctx = document.getElementById("sizeChart");
 
   if (!uploadForm || !fileList || !clearRecycleButton || !ctx) {
-    console.error("No se encontraron elementos HTML requeridos.");
+    console.error("Faltan algunos elementos en el HTML.");
     return;
   }
 
-  let sizeChartInstance = null; // Almacenar el gráfico para poder actualizarlo
+  let sizeChartInstance = null; // Guardamos la instancia del gráfico para actualizarlo
 
-  // Función para listar los archivos subidos
+  // Función que borra la papelera y actualiza la lista de archivos
+  async function clearRecycle() {
+    try {
+      const response = await fetch("/uploads/recycle", { method: "DELETE" });
+      if (!response.ok) throw new Error("No se pudo limpiar la papelera");
+      alert("Papelera vaciada!");
+      fetchFolderSizes(); // Actualizar el gráfico después de limpiar
+    } catch (error) {
+      console.error(error.message);
+    }
+  }
+
+  // Manejar el botón para vaciar la papelera
+  clearRecycleButton.addEventListener("click", async () => {
+    await clearRecycle();
+    fetchFiles();
+  });
+
+  // Obtiene la lista de archivos del servidor y los muestra en la interfaz
   async function fetchFiles() {
     try {
       const response = await fetch("/uploads");
-      if (!response.ok) throw new Error("Error al obtener los archivos");
+      if (!response.ok) throw new Error("No se pudieron cargar los archivos");
       const files = await response.json();
       fileList.innerHTML = "";
-
+      
       files.forEach((file) => {
         const li = document.createElement("li");
         li.className = "flex justify-between items-center bg-gray-100 p-2 rounded-lg shadow-sm";
@@ -29,13 +46,13 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         fileList.appendChild(li);
       });
-
+      
       document.querySelectorAll("button[data-filename]").forEach((button) => {
         button.addEventListener("click", async (e) => {
           const fileName = e.target.dataset.filename;
           await moveFileToRecycle(fileName);
           fetchFiles();
-          fetchFolderSizes(); // Actualizar el gráfico después de eliminar un archivo
+          fetchFolderSizes(); // Actualizar el gráfico
         });
       });
     } catch (error) {
@@ -43,35 +60,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Función para mover archivo a recycle
+  // Mueve un archivo a la papelera
   async function moveFileToRecycle(fileName) {
     try {
       const response = await fetch(`/uploads/recycle/${fileName}`, { method: "POST" });
-      if (!response.ok) throw new Error(`Error al mover el archivo: ${fileName}`);
+      if (!response.ok) throw new Error(`No se pudo eliminar el archivo: ${fileName}`);
     } catch (error) {
       console.error(error.message);
     }
   }
 
-  // Función para vaciar la carpeta recycle
-  async function clearRecycle() {
-    try {
-      const response = await fetch("/uploads/recycle", { method: "DELETE" });
-      if (!response.ok) throw new Error("Error al vaciar la papelera");
-      alert("Papelera vaciada correctamente");
-      fetchFolderSizes(); // Actualizar el gráfico después de vaciar la papelera
-    } catch (error) {
-      console.error(error.message);
-    }
-  }
-
-  // Evento para vaciar la papelera
-  clearRecycleButton.addEventListener("click", async () => {
-    await clearRecycle();
-    fetchFiles();
-  });
-
-  // Manejador de envío del formulario de subida
+  // Manejador del formulario de subida de archivos
   uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(uploadForm);
@@ -80,39 +79,36 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Error al subir el archivo");
+      if (!response.ok) throw new Error("Error subiendo el archivo");
       uploadForm.reset();
       fetchFiles();
-      fetchFolderSizes(); // Actualizar el gráfico después de subir un archivo
+      fetchFolderSizes(); // Refrescar el gráfico
     } catch (error) {
       console.error(error.message);
     }
   });
 
-  // Función para obtener los tamaños de las carpetas y actualizar el gráfico
+  // Obtiene los tamaños de las carpetas y dibuja el gráfico
   async function fetchFolderSizes() {
     try {
       const response = await fetch(`/uploads/sizes?timestamp=${new Date().getTime()}`);
-      if (!response.ok) throw new Error("Error al obtener los tamaños");
+      if (!response.ok) throw new Error("No se pudo obtener el tamaño de las carpetas");
       const sizes = await response.json();
   
-      // Convertir los tamaños a MB y asegurarse de que ambas barras existen
-      const uploadsSize = sizes.update / (1024 * 1024); 
+      const uploadsSize = sizes.update / (1024 * 1024);
       const recycleSize = sizes.recycle / (1024 * 1024);
   
-      // Si ya existe un gráfico, destruirlo antes de crear uno nuevo
       if (sizeChartInstance) {
         sizeChartInstance.destroy();
       }
   
-      // Crear el nuevo gráfico con las dos barras siempre visibles
       sizeChartInstance = new Chart(ctx, {
-        type: "doughnut",
+        type: "bar",
         data: {
           labels: ["Uploads", "Recycle"],
           datasets: [{
             label: "Tamaño (MB)",
-            data: [uploadsSize, recycleSize], // Siempre incluye ambos valores, incluso si son 0
+            data: [uploadsSize, recycleSize],
             backgroundColor: ["#4CAF50", "#FF5722"],
             borderColor: ["#388E3C", "#D32F2F"],
             borderWidth: 1
@@ -123,8 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
           scales: {
             y: {
               beginAtZero: true,
-              suggestedMin: 0, // Asegura que el eje Y comience en 0
-              suggestedMax: Math.max(uploadsSize, recycleSize, 1) // Evita que el gráfico se vea vacío si ambos son 0
+              suggestedMin: 0,
+              suggestedMax: Math.max(uploadsSize, recycleSize, 1)
             }
           }
         }
@@ -134,8 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Cargar la lista de archivos y el gráfico al cargar la página
+  // Inicializar la lista de archivos y el gráfico al cargar la página
   fetchFiles();
   fetchFolderSizes();
-  
 });
