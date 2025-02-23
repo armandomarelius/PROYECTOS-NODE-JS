@@ -1,0 +1,16 @@
+# Usar una imagen base de Node.js
+FROM node:23-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+
+CMD ["npm", "start"]

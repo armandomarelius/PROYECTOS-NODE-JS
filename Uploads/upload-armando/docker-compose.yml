@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: uploads_app
+    build: ./
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: ["npm", "start"]

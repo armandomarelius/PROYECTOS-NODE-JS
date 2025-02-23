@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGODB_URI=mongodb://root:example@mongodb:27017/auth_db?authSource=admin
+      - MOVIE_API_URL=https://api.themoviedb.org/3/movie/popular
+      - MOVIEDATA_API_URL=https://api.themoviedb.org/3/movie
+      - CORS_ORIGIN=http://localhost:5173
+      - JWT_SECRET=claveSUPERSECRETA
+      - TMDB_API_KEY=a33481fb05443bafabda012d518d3c88
+      - TMDB_BASE_URL=https://api.themoviedb.org/3
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BASE_URL=http://localhost:3000/api
+      - VITE_BASE_IMAGE_URL=https://image.tmdb.org/t/p
+    depends_on:
+      - backend
+    networks:
+      - app-network
+  mongodb:
+      image: mongo:latest
+      container_name: mongodb
+      environment:
+        MONGO_INITDB_ROOT_USERNAME: root
+        MONGO_INITDB_ROOT_PASSWORD: example
+        MONGO_INITDB_DATABASE: auth_db
+      ports:
+        - "27017:27017"
+      volumes:
+        - mongodb_data:/data/db
+      networks:
+        - app-network
+      healthcheck:
+        test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+        interval: 10s
+        timeout: 10s
+        retries: 5
+        start_period: 40s
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongodb:27017/?authSource=admin
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: 123456
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
