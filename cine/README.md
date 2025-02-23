@@ -19,10 +19,32 @@ Una aplicación web full-stack para gestionar películas, reseñas y favoritos d
 
 ## Instalación y Configuración
 
-1. Clona el repositorio:
+ 1. Clona el repositorio:
+  git clone <repository-url>
+  2.  cd cine
+  3. docker compose up --build 
+
+
+## Variables de entorno
+#### frontend (.env): 
+PORT=3000
+MONGODB_URI=mongodb://root:example@mongo:27017/auth_db?authSource=admin
+JWT_SECRET=claveSUPERSECRETA
+FRONTEND_URL=http://localhost
+
+TMDB_API_KEY=a33481fb05443bafabda012d518d3c88
+TMDB_BASE_URL=https://api.themoviedb.org/3
+
+#### backend (.env):
+VITE_API_TOKEN=a33481fb05443bafabda012d518d3c88
+VITE_BASE_IMAGE_URL=https://image.tmdb.org/t/p
+VITE_BACKEND_URL=http://localhost:3000
+
+
+
+
+### Estrtuctura:  
 ```bash
-git clone <repository-url>
-cd cine
 
 cine/
 ├── frontend/          # Aplicación frontend en React
